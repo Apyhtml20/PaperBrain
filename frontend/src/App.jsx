@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
 const api = async (endpoint, method = "GET", body = null, token = null) => {
@@ -30,11 +31,11 @@ const TRANSLATIONS = {
     generalChat: "General Chat",
     myDocs: "My Documents (RAG)",
     shiftEnter: "Shift+Enter for new line",
-    chatPlaceholderRag: "Ask about your documents...",
-    chatPlaceholder: "Enter your question...",
+    chatPlaceholderRag: "Ask a question...",
+    chatPlaceholder: "Type your message...",
     quizGenerator: "Quiz Generator",
     topic: "Topic",
-    topicPlaceholderQuiz: "e.g. Photosynthesis, World War II...",
+    topicPlaceholderQuiz: "Enter a topic...",
     questions: "Questions",
     difficulty: "Difficulty",
     easy: "Easy",
@@ -55,7 +56,7 @@ const TRANSLATIONS = {
     next: "Next",
     submit: "Submit",
     flashcardGenerator: "Flashcard Generator",
-    topicPlaceholderFC: "e.g. Cell organelles, French Revolution...",
+    topicPlaceholderFC: "Enter a topic...",
     generateFlashcards: "Generate Flashcards",
     noFlashcards: "No flashcards generated.",
     newTopic: "New Topic",
@@ -65,7 +66,7 @@ const TRANSLATIONS = {
     clickQuestion: "Click to see question",
     conceptExplainer: "Concept Explainer",
     concept: "Concept",
-    topicPlaceholderExplain: "e.g. Mitosis, Quantum entanglement...",
+    topicPlaceholderExplain: "Enter a concept...",
     level: "Level",
     beginner: "Beginner",
     intermediate: "Intermediate",
@@ -116,11 +117,11 @@ const TRANSLATIONS = {
     generalChat: "Chat Général",
     myDocs: "Mes Documents (RAG)",
     shiftEnter: "Maj+Entrée pour nouvelle ligne",
-    chatPlaceholderRag: "Posez une question sur vos documents...",
-    chatPlaceholder: "Entrez votre question...",
+    chatPlaceholderRag: "Posez une question...",
+    chatPlaceholder: "Tapez votre message...",
     quizGenerator: "Générateur de Quiz",
     topic: "Sujet",
-    topicPlaceholderQuiz: "ex : Photosynthèse, Seconde Guerre mondiale...",
+    topicPlaceholderQuiz: "Entrez un sujet...",
     questions: "Questions",
     difficulty: "Difficulté",
     easy: "Facile",
@@ -141,7 +142,7 @@ const TRANSLATIONS = {
     next: "Suivant",
     submit: "Soumettre",
     flashcardGenerator: "Générateur de Fiches",
-    topicPlaceholderFC: "ex : Organites cellulaires, Révolution française...",
+    topicPlaceholderFC: "Entrez un sujet...",
     generateFlashcards: "Générer les Fiches",
     noFlashcards: "Aucune fiche générée.",
     newTopic: "Nouveau Sujet",
@@ -151,7 +152,7 @@ const TRANSLATIONS = {
     clickQuestion: "Cliquer pour voir la question",
     conceptExplainer: "Explication de Concept",
     concept: "Concept",
-    topicPlaceholderExplain: "ex : Mitose, Intrication quantique...",
+    topicPlaceholderExplain: "Entrez un concept...",
     level: "Niveau",
     beginner: "Débutant",
     intermediate: "Intermédiaire",
@@ -232,13 +233,13 @@ const C = {
 const LangSwitcher = ({ lang, setLang }) => (
   <div style={{
     display: "flex", gap: 0,
-    border: `1px solid #333`,
+    border: `1px solid ${C.border}`,
     borderRadius: 6, overflow: "hidden",
     flexShrink: 0,
   }}>
     {["en", "fr"].map(l => (
       <button key={l} onClick={() => setLang(l)} style={{
-        padding: "4px 9px",
+        padding: "5px 10px",
         fontSize: 11,
         fontWeight: 600,
         letterSpacing: 0.4,
@@ -246,7 +247,7 @@ const LangSwitcher = ({ lang, setLang }) => (
         border: "none",
         cursor: "pointer",
         background: lang === l ? C.accentMid : "transparent",
-        color: lang === l ? C.white : C.sidebarText,
+        color: lang === l ? C.white : C.muted,
         transition: "all 0.15s",
         fontFamily: "'DM Sans', sans-serif",
       }}>{l}</button>
@@ -316,13 +317,12 @@ const AuthPage = ({ onLogin, t, lang, setLang }) => {
           backdropFilter: "blur(2px)",
         }} />
 
-        {/* Lang switcher */}
+        {/* Lang switcher top-right */}
         <div style={{ position: "fixed", top: 20, right: 24, display: "flex", gap: 6, alignItems: "center", zIndex: 10 }}>
-          <span style={{ fontSize: 11, color: "#fff", fontWeight: 500 }}>Lang:</span>
           <div style={{ display: "flex", border: `1px solid rgba(255,255,255,0.3)`, borderRadius: 6, overflow: "hidden" }}>
             {["en", "fr"].map(l => (
               <button key={l} onClick={() => setLang(l)} style={{
-                padding: "4px 10px", fontSize: 11, fontWeight: 600, letterSpacing: 0.4,
+                padding: "5px 10px", fontSize: 11, fontWeight: 600, letterSpacing: 0.4,
                 textTransform: "uppercase", border: "none", cursor: "pointer",
                 background: lang === l ? C.accentMid : "rgba(255,255,255,0.15)",
                 color: "#fff",
@@ -332,18 +332,14 @@ const AuthPage = ({ onLogin, t, lang, setLang }) => {
           </div>
         </div>
 
-        {/* Contenu */}
+        {/* Card */}
         <div style={{ width: 420, animation: "fadeUp 0.4s ease", position: "relative", zIndex: 1 }}>
           <div style={{ textAlign: "center", marginBottom: 36 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
               <div style={{ width: 36, height: 36, background: C.accent, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                </svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
               </div>
-              <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: "#fff" }}>
-                Paper<span style={{ color: C.accentMid }}>Brain</span>
-              </span>
+              <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: "#fff" }}>Paper<span style={{ color: C.accentMid }}>Brain</span></span>
             </div>
             <p style={{ fontSize: 14, color: "rgba(255,255,255,0.8)" }}>{t.tagline}</p>
           </div>
@@ -402,7 +398,7 @@ const AuthPage = ({ onLogin, t, lang, setLang }) => {
 // ── CHAT ──────────────────────────────────────────────────────────────────────
 const ChatPage = ({ token, username, t }) => {
   const [messages, setMessages] = useState([
-    { role: "ai", text: `Hello ${username}\n\n${t.generalChat}: open questions\nRAG Mode: answers from your uploaded documents` }
+    { role: "ai", text: `Hello ${username} — PaperBrain is ready.\n\n${t.generalChat}: open questions\nRAG Mode: answers from your uploaded documents` }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -971,7 +967,6 @@ const NAV_ITEMS = [
   { id: "profile",    section: null,       icon: "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 3a4 4 0 100 8 4 4 0 000-8z" },
 ];
 
-// Sidebar width — slightly narrower than original 240px
 const SIDEBAR_W = 210;
 
 export default function App() {
@@ -1003,16 +998,13 @@ export default function App() {
         {/* SIDEBAR */}
         <aside style={{ width: SIDEBAR_W, minWidth: SIDEBAR_W, background: C.sidebar, display: "flex", flexDirection: "column", padding: "24px 0 20px", height: "100vh", flexShrink: 0 }}>
 
-          {/* Logo + lang switcher */}
+          {/* Logo — sans switcher de langue */}
           <div style={{ padding: "0 18px 22px", borderBottom: `1px solid #292524` }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 28, height: 28, background: C.accent, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                </div>
-                <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: C.white }}>Paper<span style={{ color: C.accentMid }}>Brain</span></span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 28, height: 28, background: C.accent, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
               </div>
-              <LangSwitcher lang={lang} setLang={setLang} />
+              <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: C.white }}>Paper<span style={{ color: C.accentMid }}>Brain</span></span>
             </div>
           </div>
 
@@ -1058,13 +1050,18 @@ export default function App() {
 
         {/* MAIN */}
         <main style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden", height: "100vh" }}>
+
+          {/* Header avec lang switcher à droite */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 32px 0", flexShrink: 0 }}>
             <div>
               <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: C.text, letterSpacing: -0.5 }}>{t.nav[page]}</div>
               <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>{pageSubtitles[page]}</div>
             </div>
-            <div style={{ fontSize: 12, color: C.muted, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, padding: "5px 14px" }}>
-              {new Date().toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", { weekday: "short", month: "short", day: "numeric" })}
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <LangSwitcher lang={lang} setLang={setLang} />
+              <div style={{ fontSize: 12, color: C.muted, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, padding: "5px 14px" }}>
+                {new Date().toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", { weekday: "short", month: "short", day: "numeric" })}
+              </div>
             </div>
           </div>
 
