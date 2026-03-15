@@ -1033,7 +1033,6 @@ export default function App() {
           </nav>
 
           {/* User row */}
-          {/* User row */}
           <div style={{ padding: "14px 10px 0", borderTop: `1px solid #292524` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px" }}>
               <div style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg,#EA580C,#DC2626)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: C.white, flexShrink: 0 }}>
@@ -1047,14 +1046,13 @@ export default function App() {
               </button>
             </div>
           </div>
-
-          {/* ── SIGNATURE ── */}
+        </aside>
+   {/* ── SIGNATURE ── */}
           <div style={{ padding: "10px 18px 4px", textAlign: "center" }}>
             <span style={{ fontSize: 10, color: "#3D3835", fontWeight: 500, letterSpacing: 0.5 }}>
-              Made by Hicham Ab. <span style={{ color: C.accentMid, fontWeight: 600 }}>Votre Nom</span>
+              Made by Hicham Ab <span style={{ color: C.accentMid, fontWeight: 600 }}>Votre Nom</span>
             </span>
           </div>
-
         {/* MAIN */}
         <main style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden", height: "100vh" }}>
 
