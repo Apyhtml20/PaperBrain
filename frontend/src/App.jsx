@@ -1000,13 +1000,20 @@ export default function App() {
 
           {/* Logo — sans switcher de langue */}
           <div style={{ padding: "0 18px 22px", borderBottom: `1px solid #292524` }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 28, height: 28, background: C.accent, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-              </div>
-              <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: C.white }}>Paper<span style={{ color: C.accentMid }}>Brain</span></span>
-            </div>
-          </div>
+  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div style={{ width: 28, height: 28, background: C.accent, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: C.white }}>Paper<span style={{ color: C.accentMid }}>Brain</span></span>
+  </div>
+
+  {/* Signature sous le logo */}
+  <div style={{ marginTop: 8, paddingLeft: 2 }}>
+    <span style={{ fontSize: 10, color: "#57534E", fontWeight: 400, letterSpacing: 0.3 }}>
+      by <span style={{ color: C.accentMid, fontWeight: 600, fontFamily: "'DM Serif Display', serif", fontSize: 11 }}>Hicham Ab</span>
+    </span>
+  </div>
+</div>
 
           <nav style={{ flex: 1, padding: "16px 10px", display: "flex", flexDirection: "column", gap: 2 }}>
             {sections.map(sec => (
@@ -1047,12 +1054,6 @@ export default function App() {
             </div>
           </div>
         </aside>
-   {/* ── SIGNATURE ── */}
-          <div style={{ padding: "10px 18px 4px", textAlign: "center" }}>
-            <span style={{ fontSize: 10, color: "#3D3835", fontWeight: 500, letterSpacing: 0.5 }}>
-              Made by Hicham Ab <span style={{ color: C.accentMid, fontWeight: 600 }}>Votre Nom</span>
-            </span>
-          </div>
         {/* MAIN */}
         <main style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden", height: "100vh" }}>
 
