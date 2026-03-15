@@ -1,0 +1,30 @@
+# API & serveur
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+
+# Auth & sécurité
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Base de données
+sqlalchemy==2.0.30
+
+# HuggingFace
+huggingface-hub>=0.31.0
+
+# NumPy — forcer 1.x pour compatibilité ChromaDB
+numpy<2.0
+
+# RAG / ChromaDB
+chromadb==0.5.0
+onnxruntime==1.18.0
+
+# Lecture de documents
+pdfplumber==0.11.1
+python-docx==1.1.2
+
+# Utilitaires
+pydantic==2.7.1
+python-dotenv==1.0.1
+requests==2.32.3

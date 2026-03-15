@@ -1,0 +1,313 @@
+import asyncio
+import json
+import re
+import os
+from huggingface_hub import InferenceClient
+
+# ── Config ────────────────────────────────────────────────────────────────────
+HF_TOKEN   = os.getenv("HF_TOKEN", "")
+MODEL_NAME = os.getenv("HF_MODEL", "Qwen/Qwen2.5-72B-Instruct")
+
+conversation_store: dict[str, list] = {}
+
+_client: InferenceClient | None = None
+
+
+def _get_client() -> InferenceClient:
+    global _client
+    if _client is None:
+        _client = InferenceClient(token=HF_TOKEN or None)
+    return _client
+
+
+# ── Core call — utilise chat_completion (compatible tous providers HF) ─────────
+def _call_hf(
+    system: str,
+    user: str,
+    max_tokens: int = 1024,
+    temperature: float = 0.4,
+) -> str:
+    try:
+        client = _get_client()
+        response = client.chat_completion(
+            model=MODEL_NAME,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user",   "content": user},
+            ],
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        raise Exception(f"HuggingFace InferenceClient error: {str(e)}")
+
+
+# ── JSON helpers ──────────────────────────────────────────────────────────────
+def _fix_json(s: str) -> str:
+    s = re.sub(r',\s*([}\]])', r'\1', s)
+    s = re.sub(r'[\x00-\x1f\x7f]', ' ', s)
+    return s
+
+
+def _extract_json_array(raw: str) -> list:
+    cleaned = re.sub(r'```(?:json)?\s*', '', raw)
+    cleaned = re.sub(r'```', '', cleaned).strip()
+
+    try:
+        result = json.loads(cleaned)
+        if isinstance(result, list):
+            return result
+    except Exception:
+        pass
+
+    start = cleaned.find('[')
+    if start != -1:
+        depth = 0
+        for i, ch in enumerate(cleaned[start:], start):
+            if ch == '[':
+                depth += 1
+            elif ch == ']':
+                depth -= 1
+                if depth == 0:
+                    candidate = cleaned[start:i + 1]
+                    for attempt in (candidate, _fix_json(candidate)):
+                        try:
+                            result = json.loads(attempt)
+                            if isinstance(result, list):
+                                return result
+                        except Exception:
+                            pass
+                    break
+
+    match = re.search(r'\[[\s\S]*\]', cleaned)
+    if match:
+        for attempt in (match.group(), _fix_json(match.group())):
+            try:
+                return json.loads(attempt)
+            except Exception:
+                pass
+
+    return []
+
+
+# ── Conversation history ──────────────────────────────────────────────────────
+def _get_history(user_id: str) -> list:
+    return conversation_store.get(user_id, [])
+
+
+def _save_history(user_id: str, user_msg: str, ai_msg: str) -> None:
+    if user_id not in conversation_store:
+        conversation_store[user_id] = []
+    conversation_store[user_id].append({"user": user_msg, "assistant": ai_msg})
+    conversation_store[user_id] = conversation_store[user_id][-5:]
+
+
+# ── Async entry point ─────────────────────────────────────────────────────────
+async def run_agent(action: str, data: dict) -> dict:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _run_sync, action, data)
+
+
+def _run_sync(action: str, data: dict) -> dict:
+    dispatch = {
+        "chat":       _chat,
+        "quiz":       _quiz,
+        "flashcards": _flashcards,
+        "explain":    _explain,
+        "resume":     _resume,
+        "rag-qa":     _rag_qa,
+    }
+    handler = dispatch.get(action)
+    if handler:
+        return handler(data)
+    return {"answer": f"Unknown action: {action}", "action": action}
+
+
+# ── Action handlers ───────────────────────────────────────────────────────────
+
+def _chat(data: dict) -> dict:
+    query   = data.get("query", "")
+    user_id = data.get("user_id", "anonymous")
+    history = _get_history(user_id)
+
+    history_text = ""
+    if history:
+        history_text = "Conversation récente :\n" + "\n".join(
+            f"Utilisateur: {h['user']}\nAssistant: {h['assistant']}"
+            for h in history
+        ) + "\n\n"
+
+    system = (
+        "Tu es PaperBrain AI, un assistant pédagogique pour les étudiants. "
+        "Aide les étudiants à comprendre leurs cours, préparer leurs examens et apprendre efficacement. "
+        "Réponds toujours dans la même langue que la question. "
+        "Sois clair, structuré et pédagogique."
+    )
+    user = f"{history_text}Utilisateur : {query}"
+
+    answer = _call_hf(system, user, max_tokens=1024, temperature=0.5)
+    _save_history(user_id, query, answer)
+    return {"answer": answer, "user_id": user_id}
+
+
+def _quiz(data: dict) -> dict:
+    topic         = data.get("topic", "")
+    num_questions = data.get("num_questions", 5)
+    difficulty    = data.get("difficulty", "medium")
+
+    difficulty_map = {
+        "easy":   "simples et directes, pour débutants",
+        "medium": "de difficulté intermédiaire",
+        "hard":   "difficiles et approfondies, pour experts",
+    }
+    level_desc = difficulty_map.get(difficulty, "de difficulté intermédiaire")
+
+    system = (
+        "Tu es un générateur de quiz pédagogique. "
+        "Tu réponds UNIQUEMENT avec un tableau JSON valide, sans texte avant ni après, sans balises markdown."
+    )
+    user = (
+        f"Génère {num_questions} questions QCM ({level_desc}) sur : \"{topic}\".\n\n"
+        "Chaque objet JSON doit contenir : question, options (tableau de 4 chaînes "
+        "\"A) ...\", \"B) ...\", \"C) ...\", \"D) ...\"), correct_answer (A/B/C/D), explanation.\n\n"
+        "Réponds UNIQUEMENT avec le tableau JSON."
+    )
+
+    raw = _call_hf(system, user, max_tokens=1500, temperature=0.3)
+    questions = _extract_json_array(raw)
+
+    if questions:
+        clean = [
+            {
+                "question":       str(q.get("question", "")),
+                "options":        list(q.get("options", [])),
+                "correct_answer": str(q.get("correct_answer", "A")),
+                "explanation":    str(q.get("explanation", "")),
+            }
+            for q in questions
+            if isinstance(q, dict) and q.get("question") and q.get("options")
+        ]
+        if clean:
+            return {"questions": clean, "topic": topic, "difficulty": difficulty}
+
+    return {"questions": [], "topic": topic, "error": "JSON invalide.", "raw_preview": raw[:300]}
+
+
+def _flashcards(data: dict) -> dict:
+    topic     = data.get("topic", "")
+    num_cards = data.get("num_cards", 8)
+
+    system = (
+        "Tu es un générateur de flashcards pédagogiques. "
+        "Tu réponds UNIQUEMENT avec un tableau JSON valide, sans texte avant ni après, sans balises markdown."
+    )
+    user = (
+        f"Génère {num_cards} flashcards sur : \"{topic}\".\n\n"
+        "Chaque objet JSON doit contenir : front (question/terme) et back (réponse/définition).\n\n"
+        "Réponds UNIQUEMENT avec le tableau JSON."
+    )
+
+    raw   = _call_hf(system, user, max_tokens=1024, temperature=0.3)
+    cards = _extract_json_array(raw)
+
+    if cards:
+        clean = [
+            {"front": str(c.get("front", "")), "back": str(c.get("back", ""))}
+            for c in cards
+            if isinstance(c, dict) and c.get("front") and c.get("back")
+        ]
+        if clean:
+            return {"flashcards": clean, "topic": topic}
+
+    return {"flashcards": [], "topic": topic, "error": "Impossible de parser les flashcards."}
+
+
+def _explain(data: dict) -> dict:
+    concept = data.get("concept", "")
+    level   = data.get("level", "intermediate")
+
+    level_map = {
+        "beginner":     "de manière très simple, avec des analogies du quotidien, pour un lycéen",
+        "intermediate": "clairement avec les concepts essentiels, pour un étudiant universitaire",
+        "advanced":     "de manière approfondie et technique, pour un expert du domaine",
+    }
+    level_desc = level_map.get(level, level_map["intermediate"])
+
+    system = (
+        "Tu es un professeur pédagogue expert. "
+        "Réponds dans la même langue que le concept demandé."
+    )
+    user = (
+        f"Explique le concept suivant {level_desc}.\n\n"
+        "Structure ta réponse avec :\n"
+        "1. Définition courte et claire\n"
+        "2. Points clés à retenir\n"
+        "3. Exemple concret\n"
+        "4. Applications pratiques\n\n"
+        f"Concept : {concept}"
+    )
+
+    explanation = _call_hf(system, user, max_tokens=1024, temperature=0.5)
+    return {"explanation": explanation, "concept": concept, "level": level}
+
+
+def _resume(data: dict) -> dict:
+    text = data.get("text", "")
+    if not text:
+        return {"summary": "Aucun texte fourni."}
+
+    system = (
+        "Tu es un assistant pédagogique expert en synthèse de documents. "
+        "Réponds dans la même langue que le texte fourni."
+    )
+    user = (
+        "Résume le texte suivant de façon claire et structurée.\n"
+        "Utilise des titres et des points clés.\n\n"
+        f"Texte :\n{text[:3000]}"
+    )
+
+    summary = _call_hf(system, user, max_tokens=1024, temperature=0.4)
+    return {"summary": summary}
+
+
+def _rag_qa(data: dict) -> dict:
+    query = data.get("query", "")
+
+    try:
+        from app.rag import query_documents
+
+        results   = query_documents(query, n_results=4)
+        documents = results.get("documents", [[]])[0]
+        metadatas = results.get("metadatas",  [[]])[0]
+        distances = results.get("distances",  [[]])[0]
+
+        THRESHOLD = 0.8
+        relevant  = [
+            (doc, meta)
+            for doc, meta, dist in zip(documents, metadatas, distances)
+            if dist < THRESHOLD
+        ]
+
+        if not relevant:
+            return {
+                "answer":  "Aucune information pertinente trouvée dans vos documents.",
+                "sources": [],
+            }
+
+        context = "\n\n---\n\n".join([doc for doc, _ in relevant])
+        sources  = list(set([meta.get("source", "inconnu") for _, meta in relevant]))
+
+        system = (
+            "Tu es un assistant pédagogique RAG. "
+            "Réponds à la question en te basant UNIQUEMENT sur le contexte fourni. "
+            "Si la réponse n'est pas dans le contexte, dis-le clairement. "
+            "Réponds dans la même langue que la question."
+        )
+        user = f"Contexte :\n{context[:3000]}\n\nQuestion : {query}"
+
+        answer = _call_hf(system, user, max_tokens=1024, temperature=0.4)
+        return {"answer": answer, "sources": sources}
+
+    except Exception as e:
+        return {"answer": f"Erreur RAG : {str(e)}", "sources": []}

@@ -1,0 +1,39 @@
+services:
+
+  backend:
+    build:
+      context: ./backend        # Docker lit les fichiers DEPUIS ./backend
+      dockerfile: Dockerfile
+    container_name: smartstudy-backend
+    ports:
+      - "8000:8000"
+    environment:
+      HF_TOKEN: ${HF_TOKEN}
+      HF_MODEL: ${HF_MODEL:-mistralai/Mistral-7B-Instruct-v0.3}
+    volumes:
+      - chroma_data:/app/chroma_db
+      - documents_data:/app/documents
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend       # Docker lit les fichiers DEPUIS ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8000/api
+    container_name: smartstudy-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  chroma_data:
+  documents_data:
