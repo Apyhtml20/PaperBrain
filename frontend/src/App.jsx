@@ -402,7 +402,7 @@ const AuthPage = ({ onLogin, t, lang, setLang }) => {
 // ── CHAT ──────────────────────────────────────────────────────────────────────
 const ChatPage = ({ token, username, t }) => {
   const [messages, setMessages] = useState([
-    { role: "ai", text: `Hello ${username} — PaperBrain is ready.\n\n${t.generalChat}: open questions\nRAG Mode: answers from your uploaded documents` }
+    { role: "ai", text: `Hello ${username}\n\n${t.generalChat}: open questions\nRAG Mode: answers from your uploaded documents` }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
