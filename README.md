@@ -20,11 +20,9 @@
 
 ---
 
-## 🌐 Live Demo
+## 🌐 Spacy Demo Live :
 
-🔗 **Hugging Face Space:** [https://huggingface.co/spaces/ApyHtml20/PaperBrain](https://huggingface.co/spaces/ApyHtml20/PaperBrain)
-
-> ⚠️ Note: ChromaDB data resets on each Space restart (free tier). For persistent storage, use the local version with n8n.
+🔗 **Hugging Face Space:** [https://huggingface.co/spaces/ApyHTML19/PaperBrainAI]https://huggingface.co/spaces/ApyHTML19/PaperBrainAI
 
 ---
 
