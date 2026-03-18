@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://huggingface.co/spaces/ApyHtml20/PaperBrain">
+  <a href="https://huggingface.co/spaces/ApyHTML19/PaperBrainAI">
     <img src="https://img.shields.io/badge/🤗%20Hugging%20Face-Space-orange" />
   </a>
   <a href="https://github.com/ApyHtml20/PaperBrain">
