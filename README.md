@@ -1,7 +1,7 @@
 # 🧠 PaperBrain — Your Intelligent Study Assistant
 
 <p align="center">
-  <img src="docs/logo.png" alt="PaperBrain Logo" width="200"/>
+  <img src="assets/logo.png" alt="PaperBrain Logo" width="200"/>
 </p>
 
 <p align="center">
@@ -88,7 +88,7 @@ PaperBrain/
 ## 🔄 n8n AI Agent (Local)
 
 <p align="center">
-  <img src="docs/n8n-workflow.png" alt="n8n PaperBrain Workflow" width="100%"/>
+  <img src="assets/n8n-workflow.png" alt="n8n PaperBrain Workflow" width="100%"/>
 </p>
 
 PaperBrain includes a **local n8n AI Agent** powered by **Ollama llama3.1** that orchestrates all learning tools automatically.
