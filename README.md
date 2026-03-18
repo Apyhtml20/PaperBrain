@@ -273,13 +273,3 @@ SECRET_KEY=...
 - Files stored in `documents/{user_id}/`
 
 ---
-
-## 👨‍💻 Author
-
-Built with ❤️ by **Hicham (ApyHtml20)**
-
----
-
-## 📄 License
-
-MIT License
