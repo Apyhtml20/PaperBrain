@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['app\\auth\\jwt_handler.py', '.dockerignore', 'app\\main.py', 'app\\tools\\tool_flashcards.py', 'app\\tools\\tool_quiz.py', 'app\\tools\\tool_rag_qa.py', 'app\\tools\\tool_resume.py', 'app\\tools\\tool_simple_explain.py', 'app\\agent.py', 'app\\ingest.py', 'app\\rag_evaluator.py']
+recent_files = ['app\\auth\\jwt_handler.py', '.dockerignore', 'app\\main.py', 'app\\tools\\tool_flashcards.py', 'app\\tools\\tool_quiz.py', 'app\\tools\\tool_rag_qa.py', 'app\\tools\\tool_resume.py', 'app\\tools\\tool_simple_explain.py', 'app\\agent.py', 'app\\ingest.py', 'app\\rag_evaluator.py', 'app\\rag.py', 'app\\router_service.py', 'app\\schemas_new.py', 'app\\schemas.py', 'app\\auth\\middleware.py', 'app\\db\\crud.py', 'app\\db\\database.py', 'app\\db\\models.py']
 
 [main]
 version = 0.2.0
