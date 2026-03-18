@@ -24,7 +24,7 @@
 
 🔗 **Hugging Face Space:** [https://huggingface.co/spaces/ApyHTML19/PaperBrainAI]
 <p align="center">
-  <img src="assets/PaperBrain.png" alt="PaperBrain Demo" width="400"/>
+  <img src="assets/PaperBrain.png" alt="n8n PaperBrain Workflow" width="100%"/>
 </p>
 ---
 
