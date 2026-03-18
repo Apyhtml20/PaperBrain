@@ -23,7 +23,9 @@
 ## 🌐 Spacy Demo Live :
 
 🔗 **Hugging Face Space:** [https://huggingface.co/spaces/ApyHTML19/PaperBrainAI]
-
+<p align="center">
+  <img src="assets/PaperBrain.png" alt="PaperBrain Logo" width="200"/>
+</
 ---
 
 ## ✨ Features
