@@ -41,7 +41,7 @@
 | 📁 **Document Manager** | Upload PDF, TXT, DOCX — indexed per user |
 | 👤 **Auth** | JWT-based register/login with user isolation |
 | 📊 **Profile & Stats** | Quiz history, streaks, progression tracking |
-| 🔄 **n8n AI Agent** | Local AI Agent with Ollama llama3.1 + 5 tools |
+| 🔄 **n8n AI Agent** | Local AI Agent with Ollama llama3.1/Qwen 2.5 (Locally/Pre-trained Model on HuggingFace + 5 tools |
 
 ---
 
