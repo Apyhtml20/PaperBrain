@@ -22,7 +22,7 @@
 
 ## 🌐 Spacy Demo Live :
 
-🔗 **Hugging Face Space:** [https://huggingface.co/spaces/ApyHTML19/PaperBrainAI]https://huggingface.co/spaces/ApyHTML19/PaperBrainAI
+🔗 **Hugging Face Space:** [https://huggingface.co/spaces/ApyHTML19/PaperBrainAI]
 
 ---
 
