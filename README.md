@@ -1,4 +1,4 @@
-# 🧠 PaperBrain — Your Intelligent Study Assistant
+# PaperBrain — Your Intelligent Study Assistant
 
 <p align="center">
   <img src="assets/logo.png" alt="PaperBrain Logo" width="200"/>
