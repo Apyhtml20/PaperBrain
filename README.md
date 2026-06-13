@@ -1,73 +1,76 @@
-# PaperBrain — Your Intelligent Study Assistant
-
 <p align="center">
-  <img src="assets/logo.png" alt="PaperBrain Logo" width="200"/>
+  <img src="assets/logo.png" alt="PaperBrain Logo" width="160"/>
 </p>
+
+<h1 align="center">PaperBrain</h1>
+<p align="center"><strong>Your AI-powered study assistant — chat, quiz, explain, summarize, and more.</strong></p>
 
 <p align="center">
   <a href="https://huggingface.co/spaces/ApyHTML19/PaperBrainAI">
-    <img src="https://img.shields.io/badge/🤗%20Hugging%20Face-Space-orange" />
+    <img src="https://img.shields.io/badge/🤗%20Hugging%20Face-Live%20Demo-orange" />
   </a>
   <a href="https://github.com/ApyHtml20/PaperBrain">
     <img src="https://img.shields.io/badge/GitHub-Repository-black" />
   </a>
   <img src="https://img.shields.io/badge/FastAPI-0.100+-green" />
   <img src="https://img.shields.io/badge/React-18+-blue" />
-  <img src="https://img.shields.io/badge/n8n-local-purple" />
+  <img src="https://img.shields.io/badge/n8n-local%20agent-purple" />
 </p>
 
-> AI-powered learning platform with RAG, Quiz, Flashcards, Explain, Resume — and local n8n AI Agent automation.
-
----
-
-## 🌐 Spacy Demo Live :
-
-🔗 **Hugging Face Space:** [https://huggingface.co/spaces/ApyHTML19/PaperBrainAI]
 <p align="center">
-  <img src="assets/PaperBrain.png" alt="n8n PaperBrain Workflow" width="100%"/>
+  <img src="assets/PaperBrain.png" alt="PaperBrain screenshot" width="100%"/>
 </p>
----
-
-## ✨ Features
-
-| Feature | Description |
-|---|---|
-| 💬 **General Chat** | AI-powered study assistant (Qwen 2.5-72B) |
-| 📄 **RAG Mode** | Ask questions based on your uploaded documents |
-| 🧪 **Quiz** | Auto-generated MCQ quizzes on any topic |
-| 🃏 **Flashcards** | Smart flashcards for memorization |
-| 💡 **Explain** | Concept explanations at beginner / intermediate / advanced level |
-| 📝 **Resume** | Auto-summarize any text or document |
-| 📁 **Document Manager** | Upload PDF, TXT, DOCX — indexed per user |
-| 👤 **Auth** | JWT-based register/login with user isolation |
-| 📊 **Profile & Stats** | Quiz history, streaks, progression tracking |
-| 🔄 **n8n AI Agent** | Local AI Agent with Ollama llama3.1/Qwen 2.5 (Locally/Pre-trained Model on HuggingFace + 5 tools |
 
 ---
 
-## 🏗️ Architecture
+## What is PaperBrain?
+
+PaperBrain turns your documents into an interactive study session. Upload a PDF, ask questions about it, generate a quiz, get flashcards, or request a plain-English explanation — all in one place.
+
+It runs on a **FastAPI + React** stack with **Qwen 2.5-72B** via HuggingFace for cloud inference, **ChromaDB** for document retrieval (RAG), and an optional **local n8n AI Agent** powered by Ollama for fully offline automation.
+
+---
+
+## Features
+
+| | Feature | Description |
+|---|---|---|
+| 💬 | **General Chat** | Study assistant backed by Qwen 2.5-72B |
+| 📄 | **RAG Mode** | Ask questions directly about your uploaded documents |
+| 🧪 | **Quiz** | Auto-generated multiple-choice quizzes on any topic |
+| 🃏 | **Flashcards** | Smart cards for active recall and memorization |
+| 💡 | **Explain** | Concept breakdowns at beginner / intermediate / advanced level |
+| 📝 | **Summarize** | Auto-summarize any text or uploaded document |
+| 📁 | **Document Manager** | Upload PDF, TXT, DOCX — indexed per user with isolation |
+| 👤 | **Auth** | JWT-based register/login with per-user data separation |
+| 📊 | **Profile & Stats** | Quiz history, streaks, and progression tracking |
+| 🔄 | **n8n AI Agent** | Local agent with Ollama (llama3.1 / Qwen 2.5) + 5 tools |
+
+---
+
+## Architecture
 
 ```
 PaperBrain/
-├── backend/                  # FastAPI Python backend
+├── backend/                        # FastAPI Python backend
 │   ├── app/
 │   │   ├── auth/
-│   │   │   ├── jwt_handler.py     # JWT token creation/decoding
-│   │   │   └── middleware.py      # get_current_user dependency
+│   │   │   ├── jwt_handler.py      # JWT token creation/decoding
+│   │   │   └── middleware.py       # get_current_user dependency
 │   │   ├── db/
-│   │   │   ├── database.py        # SQLite + SQLAlchemy setup
-│   │   │   ├── models.py          # User, QuizResult, StudySession models
-│   │   │   └── crud.py            # DB operations
-│   │   ├── tools/                 # AI tool modules
-│   │   ├── agent.py               # Main AI dispatcher
-│   │   ├── ingest.py              # Document ingestion + chunking
-│   │   ├── rag.py                 # ChromaDB vector store
-│   │   ├── router_service.py      # All API routes
-│   │   ├── schemas.py             # Pydantic request models
-│   │   └── main.py                # FastAPI app entry point
+│   │   │   ├── database.py         # SQLite + SQLAlchemy setup
+│   │   │   ├── models.py           # User, QuizResult, StudySession
+│   │   │   └── crud.py             # DB operations
+│   │   ├── tools/                  # AI tool modules
+│   │   ├── agent.py                # Main AI dispatcher
+│   │   ├── ingest.py               # Document ingestion + chunking
+│   │   ├── rag.py                  # ChromaDB vector store
+│   │   ├── router_service.py       # API routes
+│   │   ├── schemas.py              # Pydantic request models
+│   │   └── main.py                 # FastAPI app entry point
 │   ├── Dockerfile
 │   └── requirements.txt
-├── frontend/                 # React frontend
+├── frontend/                       # React frontend
 │   └── src/
 │       └── pages/
 │           ├── Chat.jsx
@@ -75,7 +78,7 @@ PaperBrain/
 │           ├── Flashcards.jsx
 │           ├── Documents.jsx
 │           └── Profile.jsx
-├── n8n/                      # Local n8n AI Agent workflows
+├── n8n/                            # Local n8n AI Agent
 │   └── workflows/
 │       └── PaperBrain.json
 └── docs/
@@ -85,122 +88,43 @@ PaperBrain/
 
 ---
 
-## 🔄 n8n AI Agent (Local)
-
-<p align="center">
-  <img src="assets/n8n.png" alt="n8n PaperBrain Workflow" width="100%"/>
-</p>
-
-PaperBrain includes a **local n8n AI Agent** powered by **Ollama llama3.1** that orchestrates all learning tools automatically.
-
-### Workflow Architecture
-
-```
-[Input Postman / Frontend]
-        ↓
-  [AI Agent For RAG]  ←→  [Ollama - llama3.1]
-        ↓
-  ┌─────┴──────────────────────────────┐
-  │                                    │
-[Flashcards Tool]  [Explain Tool]  [RAG Tool]  [Resume Tool]  [Quiz Tool]
-        ↓
-[Output Frontend]
-```
-
-### Tools disponibles dans l'agent
-
-| Tool | Description |
-|---|---|
-| 🃏 **Flashcards Tool** | Generate flashcards on any topic |
-| 💡 **Explain Tool** | Explain a concept at any level |
-| 📄 **RAG Tool** | Search course documents for answers |
-| 📝 **Resume Tool** | Summarize topics automatically |
-| 🧪 **Quiz Tool** | Generate MCQ quiz questions |
-
-### Setup n8n local
-
-```bash
-# Install n8n
-npm install -g n8n
-
-# Start n8n
-n8n start
-# → Access at http://localhost:5678
-
-# Install Ollama
-# https://ollama.com/download
-
-# Pull llama3.1
-ollama pull llama3.1
-```
-
-### Import the workflow
-
-1. Open n8n at `http://localhost:5678`
-2. Go to **Workflows → Import**
-3. Import `n8n/workflows/PaperBrain.json`
-4. Configure the **Ollama** node with your local URL: `http://localhost:11434`
-5. **Publish** the workflow
-
----
-
-## 🚀 Tech Stack
-
-**Backend**
-- [FastAPI](https://fastapi.tiangolo.com/) — REST API
-- [SQLite](https://www.sqlite.org/) + [SQLAlchemy](https://www.sqlalchemy.org/) — Database
-- [ChromaDB](https://www.trychroma.com/) — Vector store for RAG
-- [HuggingFace InferenceClient](https://huggingface.co/docs/huggingface_hub) — Cloud AI (Qwen2.5-72B)
-- [python-jose](https://python-jose.readthedocs.io/) — JWT authentication
-- [pdfplumber](https://github.com/jsvine/pdfplumber) + [python-docx](https://python-docx.readthedocs.io/) — Document parsing
-
-**Frontend**
-- [React 18](https://reactjs.org/) — UI framework
-- [Vite](https://vitejs.dev/) — Build tool
-
-**Local AI Automation**
-- [n8n](https://n8n.io/) — AI Agent workflow automation
-- [Ollama](https://ollama.com/) — Local LLM runtime
-- [llama3.1](https://ollama.com/library/llama3.1) — Local AI model
-
-**Deployment**
-- [Hugging Face Spaces](https://huggingface.co/spaces) — Docker deployment
-
----
-
-## ⚙️ Local Setup
+## Local Setup
 
 ### Prerequisites
+
 - Python 3.10+
 - Node.js 18+
-- Ollama (for n8n local AI)
+- Ollama *(only required for the n8n local agent)*
 
-### 1. Clone the repo
+### 1 — Clone the repository
 
 ```bash
 git clone https://github.com/ApyHtml20/PaperBrain.git
 cd PaperBrain
 ```
 
-### 2. Backend
+### 2 — Backend
 
 ```bash
 cd backend
 pip install -r requirements.txt
 ```
 
-Create `.env`:
+Create a `.env` file:
+
 ```env
 HF_TOKEN=your_huggingface_token
 HF_MODEL=Qwen/Qwen2.5-72B-Instruct
 SECRET_KEY=your_secret_key_here
 ```
 
+Start the server:
+
 ```bash
 uvicorn app.main:app --reload --port 8000
 ```
 
-### 3. Frontend
+### 3 — Frontend
 
 ```bash
 cd frontend
@@ -208,43 +132,87 @@ npm install
 npm run dev
 ```
 
-### 4. n8n + Ollama
+### 4 — n8n + Ollama *(optional)*
 
 ```bash
+# Install and start Ollama, then pull the model
 ollama pull llama3.1
+
+# Install and start n8n
+npm install -g n8n
 n8n start
+# → http://localhost:5678
 ```
 
+Then in n8n:
+1. Go to **Workflows → Import**
+2. Import `n8n/workflows/PaperBrain.json`
+3. Set the Ollama node URL to `http://localhost:11434`
+4. Click **Publish**
+
 ---
 
-## 🔌 API Endpoints
+## n8n AI Agent
+
+<p align="center">
+  <img src="assets/n8n.png" alt="n8n PaperBrain Workflow" width="100%"/>
+</p>
+
+The local n8n agent orchestrates all learning tools automatically using **Ollama llama3.1** — no cloud required.
+
+```
+[Postman / Frontend]
+        ↓
+  [AI Agent (RAG)]  ←→  [Ollama — llama3.1]
+        ↓
+  ┌─────┴─────────────────────────────────┐
+  │           │           │        │       │
+[Flashcards] [Explain] [RAG] [Summarize] [Quiz]
+        ↓
+[Frontend Output]
+```
+
+| Tool | What it does |
+|---|---|
+| 🃏 Flashcards | Generate flashcards on any topic |
+| 💡 Explain | Explain a concept at any depth |
+| 📄 RAG | Search your uploaded documents |
+| 📝 Summarize | Summarize topics automatically |
+| 🧪 Quiz | Generate multiple-choice questions |
+
+---
+
+## API Reference
 
 ### Auth
-| Method | Route | Description |
-|---|---|---|
-| POST | `/api/auth/register` | Create new account |
-| POST | `/api/auth/login` | Login and get JWT token |
 
-### Learning (🔒 Auth required)
 | Method | Route | Description |
 |---|---|---|
-| POST | `/api/chat` | General AI chat |
-| POST | `/api/rag-qa` | Chat with your documents |
-| POST | `/api/quiz` | Generate MCQ quiz |
-| POST | `/api/flashcards` | Generate flashcards |
-| POST | `/api/explain` | Explain a concept |
-| POST | `/api/resume` | Summarize text |
+| `POST` | `/api/auth/register` | Create a new account |
+| `POST` | `/api/auth/login` | Log in and receive a JWT token |
 
-### Documents (🔒 Auth required)
+### Learning *(requires auth)*
+
 | Method | Route | Description |
 |---|---|---|
-| GET | `/api/documents` | List your documents |
-| POST | `/api/upload` | Upload PDF/TXT/DOCX |
-| DELETE | `/api/documents/{filename}` | Delete a document |
+| `POST` | `/api/chat` | General AI chat |
+| `POST` | `/api/rag-qa` | Chat with your documents |
+| `POST` | `/api/quiz` | Generate an MCQ quiz |
+| `POST` | `/api/flashcards` | Generate flashcards |
+| `POST` | `/api/explain` | Explain a concept |
+| `POST` | `/api/resume` | Summarize text |
+
+### Documents *(requires auth)*
+
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/api/documents` | List your documents |
+| `POST` | `/api/upload` | Upload a PDF, TXT, or DOCX file |
+| `DELETE` | `/api/documents/{filename}` | Delete a document |
 
 ---
 
-## 🐳 Docker / HF Spaces
+## Deploying to Hugging Face Spaces
 
 ```dockerfile
 FROM python:3.11-slim
@@ -255,7 +223,8 @@ COPY . .
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
 ```
 
-**HF Spaces secrets** (Settings → Variables and secrets):
+Add these under **Settings → Variables and secrets**:
+
 ```
 HF_TOKEN=...
 HF_MODEL=Qwen/Qwen2.5-72B-Instruct
@@ -264,12 +233,28 @@ SECRET_KEY=...
 
 ---
 
-## 🔐 Security
+## Tech Stack
+
+**Backend** — FastAPI · SQLite + SQLAlchemy · ChromaDB · HuggingFace InferenceClient · python-jose · pdfplumber · python-docx
+
+**Frontend** — React 18 · Vite
+
+**Local AI** — n8n · Ollama · llama3.1
+
+**Deployment** — Hugging Face Spaces (Docker)
+
+---
+
+## Security
 
 - Passwords hashed with SHA-256 + random salt
 - JWT tokens expire after 24 hours
 - All routes protected by auth middleware
-- Documents isolated by `user_id` in ChromaDB
-- Files stored in `documents/{user_id}/`
+- Documents and ChromaDB collections isolated by `user_id`
+- Files stored under `documents/{user_id}/`
 
 ---
+
+## Live Demo
+
+🔗 [huggingface.co/spaces/ApyHTML19/PaperBrainAI](https://huggingface.co/spaces/ApyHTML19/PaperBrainAI)
