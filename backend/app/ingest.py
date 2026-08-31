@@ -1,43 +1,56 @@
 import os
+import re
 import uuid
+
 from app.rag import add_documents, get_collection
 
 CHUNK_SIZE = 600
 CHUNK_OVERLAP = 80
 
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?…])\s+")
+
+
+def _split_sentences(text: str) -> list:
+    return [s.strip() for s in _SENTENCE_SPLIT.split(text) if s.strip()]
+
 
 def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list:
-    """Découpe le texte en chunks avec overlap."""
-    paragraphs = text.split("\n\n")
+    """Découpe le texte en chunks avec overlap, en respectant les limites de phrases."""
+    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+    sentences = []
+    for para in paragraphs:
+        sentences.extend(_split_sentences(para))
+
+    if not sentences:
+        return []
+
     chunks = []
     current = ""
 
-    for para in paragraphs:
-        para = para.strip()
-        if not para:
+    for sentence in sentences:
+        candidate = f"{current} {sentence}".strip() if current else sentence
+
+        if len(candidate) <= chunk_size:
+            current = candidate
             continue
-        if len(current) + len(para) < chunk_size:
-            current += ("\n\n" + para) if current else para
+
+        if current:
+            chunks.append(current.strip())
+            # Carry the tail of the previous chunk forward as overlap so
+            # context isn't lost at chunk boundaries.
+            current = (current[-overlap:] + " " + sentence).strip() if overlap else sentence
         else:
-            if current:
-                chunks.append(current.strip())
-            current = para
+            current = sentence
+
+        # A single sentence longer than chunk_size: hard-split by characters.
+        while len(current) > chunk_size * 2:
+            head, current = current[:chunk_size], current[chunk_size - overlap:]
+            chunks.append(head.strip())
 
     if current:
         chunks.append(current.strip())
 
-    # Si les paragraphes sont trop grands, découper par caractères
-    final_chunks = []
-    for chunk in chunks:
-        if len(chunk) > chunk_size * 2:
-            for i in range(0, len(chunk), chunk_size - overlap):
-                part = chunk[i:i + chunk_size]
-                if part.strip():
-                    final_chunks.append(part.strip())
-        else:
-            final_chunks.append(chunk)
-
-    return final_chunks
+    return [c for c in chunks if c]
 
 
 def read_file(file_path: str) -> str:
@@ -73,23 +86,23 @@ def read_file(file_path: str) -> str:
         raise ValueError(f"Format non supporté: {ext}. Acceptés: .pdf, .txt, .docx")
 
 
-def check_duplicate(file_name: str) -> bool:
-    """Vérifie si le document existe déjà dans ChromaDB."""
+def check_duplicate(file_name: str, user_id: str = "anonymous") -> bool:
+    """Vérifie si le document existe déjà dans la collection de l'utilisateur."""
     try:
-        collection = get_collection()
+        collection = get_collection(user_id)
         results = collection.get(where={"source": file_name})
         return len(results.get("ids", [])) > 0
-    except:
+    except Exception:
         return False
 
 
-def ingest_document(file_path: str, subject: str = "general") -> int:
-    """Ingère un document dans ChromaDB. Retourne le nombre de chunks."""
+def ingest_document(file_path: str, subject: str = "general", user_id: str = "anonymous") -> int:
+    """Ingère un document dans la collection de l'utilisateur. Retourne le nombre de chunks."""
     file_name = os.path.basename(file_path)
 
     # Supprimer les anciens chunks si le fichier existe déjà
     try:
-        collection = get_collection()
+        collection = get_collection(user_id)
         old = collection.get(where={"source": file_name})
         if old.get("ids"):
             collection.delete(ids=old["ids"])
@@ -113,11 +126,11 @@ def ingest_document(file_path: str, subject: str = "general") -> int:
             "source": file_name,
             "subject": subject,
             "chunk_index": i,
-            "total_chunks": len(chunks)
+            "total_chunks": len(chunks),
         }
         for i in range(len(chunks))
     ]
 
-    add_documents(chunks, metadatas, ids)
-    print(f"✅ {len(chunks)} chunks ingérés depuis '{file_name}' (matière: {subject})")
+    add_documents(chunks, metadatas, ids, user_id=user_id)
+    print(f"✅ {len(chunks)} chunks ingérés depuis '{file_name}' (matière: {subject}, user: {user_id})")
     return len(chunks)

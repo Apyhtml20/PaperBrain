@@ -74,20 +74,23 @@ def save_quiz_result(req: QuizResultRequest, current_user=Depends(get_current_us
 @router.post("/upload")
 async def upload_document(
     file: UploadFile = File(...),
-    subject: str = Form(default="general")
+    subject: str = Form(default="general"),
+    current_user=Depends(get_current_user),
 ):
     allowed = [".pdf", ".txt", ".docx"]
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in allowed:
         raise HTTPException(400, f"Format non supporté. Acceptés: {allowed}")
 
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    user_dir = os.path.join(UPLOAD_DIR, str(current_user.id))
+    os.makedirs(user_dir, exist_ok=True)
+    file_path = os.path.join(user_dir, file.filename)
     with open(file_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
     try:
         from app.ingest import ingest_document
-        chunks = ingest_document(file_path, subject)
+        chunks = ingest_document(file_path, subject, user_id=str(current_user.id))
         return {
             "message": f"Fichier '{file.filename}' ingéré avec succès",
             "chunks": chunks,
@@ -101,10 +104,10 @@ async def upload_document(
 
 
 @router.get("/documents")
-def list_documents():
+def list_documents(current_user=Depends(get_current_user)):
     try:
         from app.rag import get_collection
-        collection = get_collection()
+        collection = get_collection(str(current_user.id))
         results = collection.get()
         sources = {}
         for meta in results.get("metadatas", []):
@@ -121,15 +124,15 @@ def list_documents():
 
 
 @router.delete("/documents/{filename}")
-def delete_document(filename: str):
+def delete_document(filename: str, current_user=Depends(get_current_user)):
     try:
         from app.rag import get_collection
-        collection = get_collection()
+        collection = get_collection(str(current_user.id))
         results = collection.get(where={"source": filename})
         ids = results.get("ids", [])
         if ids:
             collection.delete(ids=ids)
-        file_path = os.path.join(UPLOAD_DIR, filename)
+        file_path = os.path.join(UPLOAD_DIR, str(current_user.id), filename)
         if os.path.exists(file_path):
             os.remove(file_path)
         return {"message": f"'{filename}' supprimé ({len(ids)} chunks)"}
@@ -142,17 +145,19 @@ def delete_document(filename: str):
 # ══════════════════════════════════════════════════════════
 
 @router.post("/chat")
-async def chat(req: ChatRequest):
+async def chat(req: ChatRequest, current_user=Depends(get_current_user)):
     try:
         from app.agent import run_agent
-        result = await run_agent("chat", req.dict())
+        data = req.dict()
+        data["user_id"] = str(current_user.id)
+        result = await run_agent("chat", data)
         return result
     except Exception as e:
         raise HTTPException(500, str(e))
 
 
 @router.post("/quiz")
-async def generate_quiz(req: QuizRequest):
+async def generate_quiz(req: QuizRequest, current_user=Depends(get_current_user)):
     try:
         from app.agent import run_agent
         result = await run_agent("quiz", req.dict())
@@ -162,7 +167,7 @@ async def generate_quiz(req: QuizRequest):
 
 
 @router.post("/flashcards")
-async def generate_flashcards(req: FlashcardRequest):
+async def generate_flashcards(req: FlashcardRequest, current_user=Depends(get_current_user)):
     try:
         from app.agent import run_agent
         result = await run_agent("flashcards", req.dict())
@@ -172,7 +177,7 @@ async def generate_flashcards(req: FlashcardRequest):
 
 
 @router.post("/explain")
-async def explain(req: ExplainRequest):
+async def explain(req: ExplainRequest, current_user=Depends(get_current_user)):
     try:
         from app.agent import run_agent
         result = await run_agent("explain", req.dict())
@@ -182,7 +187,7 @@ async def explain(req: ExplainRequest):
 
 
 @router.post("/resume")
-async def resume(req: ResumeRequest):
+async def resume(req: ResumeRequest, current_user=Depends(get_current_user)):
     try:
         from app.agent import run_agent
         result = await run_agent("resume", req.dict())
@@ -192,10 +197,12 @@ async def resume(req: ResumeRequest):
 
 
 @router.post("/rag-qa")
-async def rag_qa_endpoint(req: RAGRequest):
+async def rag_qa_endpoint(req: RAGRequest, current_user=Depends(get_current_user)):
     try:
         from app.agent import run_agent
-        result = await run_agent("rag-qa", req.dict())
+        data = req.dict()
+        data["user_id"] = str(current_user.id)
+        result = await run_agent("rag-qa", data)
         return result
     except Exception as e:
         raise HTTPException(500, str(e))

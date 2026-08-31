@@ -271,22 +271,41 @@ def _resume(data: dict) -> dict:
     return {"summary": summary}
 
 
+RAG_DISTANCE_THRESHOLD = float(os.getenv("RAG_DISTANCE_THRESHOLD", "0.8"))
+RAG_CONTEXT_BUDGET = 3000
+
+
+def _build_context(relevant: list) -> str:
+    """Ajoute des chunks entiers jusqu'au budget, sans jamais couper un chunk
+    au milieu (contrairement à un simple context[:N])."""
+    parts = []
+    budget = RAG_CONTEXT_BUDGET
+    for doc, _ in relevant:
+        if budget <= 0:
+            break
+        if len(doc) > budget and parts:
+            break
+        parts.append(doc)
+        budget -= len(doc)
+    return "\n\n---\n\n".join(parts)
+
+
 def _rag_qa(data: dict) -> dict:
-    query = data.get("query", "")
+    query   = data.get("query", "")
+    user_id = data.get("user_id", "anonymous")
 
     try:
         from app.rag import query_documents
 
-        results   = query_documents(query, n_results=4)
+        results   = query_documents(query, user_id=user_id, n_results=4)
         documents = results.get("documents", [[]])[0]
         metadatas = results.get("metadatas",  [[]])[0]
         distances = results.get("distances",  [[]])[0]
 
-        THRESHOLD = 0.8
-        relevant  = [
+        relevant = [
             (doc, meta)
             for doc, meta, dist in zip(documents, metadatas, distances)
-            if dist < THRESHOLD
+            if dist < RAG_DISTANCE_THRESHOLD
         ]
 
         if not relevant:
@@ -295,8 +314,8 @@ def _rag_qa(data: dict) -> dict:
                 "sources": [],
             }
 
-        context = "\n\n---\n\n".join([doc for doc, _ in relevant])
-        sources  = list(set([meta.get("source", "inconnu") for _, meta in relevant]))
+        context = _build_context(relevant)
+        sources = sorted(set(meta.get("source", "inconnu") for _, meta in relevant))
 
         system = (
             "Tu es un assistant pédagogique RAG. "
@@ -304,7 +323,7 @@ def _rag_qa(data: dict) -> dict:
             "Si la réponse n'est pas dans le contexte, dis-le clairement. "
             "Réponds dans la même langue que la question."
         )
-        user = f"Contexte :\n{context[:3000]}\n\nQuestion : {query}"
+        user = f"Contexte :\n{context}\n\nQuestion : {query}"
 
         answer = _call_hf(system, user, max_tokens=1024, temperature=0.4)
         return {"answer": answer, "sources": sources}

@@ -235,7 +235,7 @@ SECRET_KEY=...
 
 ## Tech Stack
 
-**Backend** — FastAPI · SQLite + SQLAlchemy · ChromaDB · HuggingFace InferenceClient · python-jose · pdfplumber · python-docx
+**Backend** — FastAPI · SQLite + SQLAlchemy · ChromaDB (multilingual embeddings, per-user collections) · HuggingFace InferenceClient · python-jose · pdfplumber · python-docx
 
 **Frontend** — React 18 · Vite
 
