@@ -2,45 +2,23 @@ import asyncio
 import json
 import re
 import os
-from huggingface_hub import InferenceClient
 
-# ── Config ────────────────────────────────────────────────────────────────────
-HF_TOKEN   = os.getenv("HF_TOKEN", "")
-MODEL_NAME = os.getenv("HF_MODEL", "Qwen/Qwen2.5-72B-Instruct")
+from app.llm import complete as _llm_complete
 
 conversation_store: dict[str, list] = {}
 
-_client: InferenceClient | None = None
 
-
-def _get_client() -> InferenceClient:
-    global _client
-    if _client is None:
-        _client = InferenceClient(token=HF_TOKEN or None)
-    return _client
-
-
-# ── Core call — utilise chat_completion (compatible tous providers HF) ─────────
-def _call_hf(
+# ── Core call — route via LiteLLM (cascade Groq → HuggingFace → OpenAI) ────────
+def _call_llm(
     system: str,
     user: str,
     max_tokens: int = 1024,
     temperature: float = 0.4,
 ) -> str:
     try:
-        client = _get_client()
-        response = client.chat_completion(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user",   "content": user},
-            ],
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
-        return response.choices[0].message.content.strip()
+        return _llm_complete(system, user, max_tokens=max_tokens, temperature=temperature)
     except Exception as e:
-        raise Exception(f"HuggingFace InferenceClient error: {str(e)}")
+        raise Exception(f"LLM error: {str(e)}")
 
 
 # ── JSON helpers ──────────────────────────────────────────────────────────────
@@ -146,7 +124,7 @@ def _chat(data: dict) -> dict:
     )
     user = f"{history_text}Utilisateur : {query}"
 
-    answer = _call_hf(system, user, max_tokens=1024, temperature=0.5)
+    answer = _call_llm(system, user, max_tokens=1024, temperature=0.5)
     _save_history(user_id, query, answer)
     return {"answer": answer, "user_id": user_id}
 
@@ -174,7 +152,7 @@ def _quiz(data: dict) -> dict:
         "Réponds UNIQUEMENT avec le tableau JSON."
     )
 
-    raw = _call_hf(system, user, max_tokens=1500, temperature=0.3)
+    raw = _call_llm(system, user, max_tokens=1500, temperature=0.3)
     questions = _extract_json_array(raw)
 
     if questions:
@@ -208,7 +186,7 @@ def _flashcards(data: dict) -> dict:
         "Réponds UNIQUEMENT avec le tableau JSON."
     )
 
-    raw   = _call_hf(system, user, max_tokens=1024, temperature=0.3)
+    raw   = _call_llm(system, user, max_tokens=1024, temperature=0.3)
     cards = _extract_json_array(raw)
 
     if cards:
@@ -248,7 +226,7 @@ def _explain(data: dict) -> dict:
         f"Concept : {concept}"
     )
 
-    explanation = _call_hf(system, user, max_tokens=1024, temperature=0.5)
+    explanation = _call_llm(system, user, max_tokens=1024, temperature=0.5)
     return {"explanation": explanation, "concept": concept, "level": level}
 
 
@@ -267,7 +245,7 @@ def _resume(data: dict) -> dict:
         f"Texte :\n{text[:3000]}"
     )
 
-    summary = _call_hf(system, user, max_tokens=1024, temperature=0.4)
+    summary = _call_llm(system, user, max_tokens=1024, temperature=0.4)
     return {"summary": summary}
 
 
@@ -325,7 +303,7 @@ def _rag_qa(data: dict) -> dict:
         )
         user = f"Contexte :\n{context}\n\nQuestion : {query}"
 
-        answer = _call_hf(system, user, max_tokens=1024, temperature=0.4)
+        answer = _call_llm(system, user, max_tokens=1024, temperature=0.4)
         return {"answer": answer, "sources": sources}
 
     except Exception as e:

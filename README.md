@@ -113,9 +113,19 @@ pip install -r requirements.txt
 Create a `.env` file:
 
 ```env
-HF_TOKEN=your_huggingface_token
-HF_MODEL=Qwen/Qwen2.5-72B-Instruct
 SECRET_KEY=your_secret_key_here
+
+# LLM routing (app/llm/) — set at least one; the app cascades through
+# whichever of these are present, in this order by default.
+GROQ_API_KEY=your_groq_key
+HF_TOKEN=your_huggingface_token
+OPENAI_API_KEY=your_openai_key
+
+# Optional overrides
+GROQ_MODEL=groq/llama-3.3-70b-versatile
+HF_MODEL=Qwen/Qwen2.5-72B-Instruct
+OPENAI_MODEL=gpt-4o-mini
+LLM_FALLBACK_ORDER=groq,huggingface,openai
 ```
 
 Start the server:
@@ -235,7 +245,7 @@ SECRET_KEY=...
 
 ## Tech Stack
 
-**Backend** — FastAPI · SQLite + SQLAlchemy · ChromaDB (multilingual embeddings, per-user collections) · HuggingFace InferenceClient · python-jose · pdfplumber · python-docx
+**Backend** — FastAPI · SQLite + SQLAlchemy · ChromaDB (hybrid BM25 + multilingual embeddings, per-user collections) · LiteLLM (Groq / HuggingFace / OpenAI cascade) · python-jose · pdfplumber · python-docx
 
 **Frontend** — React 18 · Vite
 

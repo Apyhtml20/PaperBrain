@@ -13,6 +13,9 @@ sqlalchemy==2.0.30
 # HuggingFace
 huggingface-hub>=0.31.0
 
+# LLM routing — cascade Groq / HuggingFace / OpenAI (voir app/llm/)
+litellm==1.83.7
+
 # NumPy — forcer 1.x pour compatibilité ChromaDB
 numpy<2.0
 
