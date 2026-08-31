@@ -12,15 +12,10 @@ from app.schemas import (
     FlashcardRequest, ExplainRequest, ResumeRequest, RAGRequest, QuizResultRequest
 )
 
-# ── Router (TOUJOURS en premier)
 router = APIRouter()
 UPLOAD_DIR = "./documents"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-
-# ══════════════════════════════════════════════════════════
-# AUTH
-# ══════════════════════════════════════════════════════════
 
 @router.post("/auth/register")
 def register(req: RegisterRequest, db: Session = Depends(get_db)):
@@ -43,10 +38,6 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     return {"access_token": token, "username": user.username, "user_id": user.id}
 
 
-# ══════════════════════════════════════════════════════════
-# PROFILE
-# ══════════════════════════════════════════════════════════
-
 @router.get("/profile")
 def get_profile(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
     return crud.get_student_profile(db, current_user.id)
@@ -57,19 +48,11 @@ def get_progress(current_user=Depends(get_current_user), db: Session = Depends(g
     return crud.get_progress(db, current_user.id)
 
 
-# ══════════════════════════════════════════════════════════
-# QUIZ RESULT
-# ══════════════════════════════════════════════════════════
-
 @router.post("/quiz/result")
 def save_quiz_result(req: QuizResultRequest, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
     result = crud.save_quiz_result(db, current_user.id, req)
     return {"message": "Résultat sauvegardé", "id": result.id}
 
-
-# ══════════════════════════════════════════════════════════
-# UPLOAD & DOCUMENTS
-# ══════════════════════════════════════════════════════════
 
 @router.post("/upload")
 async def upload_document(

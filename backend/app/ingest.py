@@ -1,7 +1,7 @@
 import os
 import re
 import uuid
-
+import pdfplumber
 from app.rag import add_documents, get_collection
 
 CHUNK_SIZE = 600
@@ -63,7 +63,6 @@ def read_file(file_path: str) -> str:
 
     elif ext == ".pdf":
         try:
-            import pdfplumber
             with pdfplumber.open(file_path) as pdf:
                 pages = []
                 for page in pdf.pages:
