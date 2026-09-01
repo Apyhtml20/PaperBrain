@@ -4,8 +4,22 @@ import re
 import os
 
 from app.llm import complete as _llm_complete
+from app.cache import get_cached, set_cached
 
 conversation_store: dict[str, list] = {}
+
+# Champ de la requête qui sert de clé au cache sémantique, par action.
+# "chat" est volontairement absent : sa réponse dépend aussi de l'historique
+# de conversation (voir _get_history ci-dessous), que la seule "query" ne
+# capture pas — la mettre en cache renverrait la réponse d'une conversation
+# précédente sans rapport avec la question actuelle.
+CACHE_KEY_FIELD = {
+    "rag-qa":     "query",
+    "quiz":       "topic",
+    "flashcards": "topic",
+    "explain":    "concept",
+    "resume":     "text",
+}
 
 
 # ── Core call — route via LiteLLM (cascade Groq → HuggingFace → OpenAI) ────────
@@ -83,8 +97,27 @@ def _save_history(user_id: str, user_msg: str, ai_msg: str) -> None:
 
 # ── Async entry point ─────────────────────────────────────────────────────────
 async def run_agent(action: str, data: dict) -> dict:
+    user_id = data.get("user_id", "anonymous")
+    field = CACHE_KEY_FIELD.get(action)
+    prompt = str(data.get(field, "")).strip() if field else ""
+
+    if prompt:
+        cached = await get_cached(action, prompt, user_id)
+        if cached is not None:
+            try:
+                result = json.loads(cached)
+                result["cached"] = True
+                return result
+            except Exception:
+                pass  # entrée corrompue: on ignore et on régénère normalement
+
     loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, _run_sync, action, data)
+    result = await loop.run_in_executor(None, _run_sync, action, data)
+
+    if prompt and isinstance(result, dict) and not result.get("error"):
+        await set_cached(action, prompt, json.dumps(result), user_id)
+
+    return result
 
 
 def _run_sync(action: str, data: dict) -> dict:
@@ -307,4 +340,4 @@ def _rag_qa(data: dict) -> dict:
         return {"answer": answer, "sources": sources}
 
     except Exception as e:
-        return {"answer": f"Erreur RAG : {str(e)}", "sources": []}
+        return {"answer": f"Erreur RAG : {str(e)}", "sources": [], "error": str(e)}

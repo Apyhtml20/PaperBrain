@@ -10,9 +10,17 @@ services:
     environment:
       HF_TOKEN: ${HF_TOKEN}
       HF_MODEL: ${HF_MODEL:-mistralai/Mistral-7B-Instruct-v0.3}
+      VALKEY_HOST: valkey
+      VALKEY_PORT: 6379
+      SEMANTIC_CACHE_ENABLED: ${SEMANTIC_CACHE_ENABLED:-true}
+      SEMANTIC_CACHE_THRESHOLD: ${SEMANTIC_CACHE_THRESHOLD:-0.12}
+      SEMANTIC_CACHE_TTL: ${SEMANTIC_CACHE_TTL:-86400}
     volumes:
       - chroma_data:/app/chroma_db
       - documents_data:/app/documents
+    depends_on:
+      valkey:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -34,6 +42,79 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # ── Cache — Valkey (fork Redis, Linux Foundation) ────────────────────────
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: smartstudy-valkey
+    ports:
+      - "6379:6379"
+    command: valkey-server --save 60 1 --appendonly yes
+    volumes:
+      - valkey_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Observabilité — BetterDB surveille Valkey (slowlog, hot keys, mémoire)
+  #    et le cache sémantique (hit-rate, coût économisé, recommandations de
+  #    seuil) via son auto-discovery dans Valkey. UI: http://localhost:3001
+  betterdb-monitor:
+    image: betterdb/monitor:latest
+    container_name: smartstudy-betterdb
+    ports:
+      - "3001:3001"
+    environment:
+      DB_HOST: valkey
+      DB_PORT: 6379
+      STORAGE_TYPE: sqlite
+      ENCRYPTION_KEY: ${BETTERDB_ENCRYPTION_KEY:-paperbrain-dev-key-change-me}
+    volumes:
+      - betterdb_data:/app/data
+    depends_on:
+      valkey:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Dashboards optionnels — `docker compose --profile monitoring up` ─────
+  #    Scrape le endpoint Prometheus de BetterDB pour des tableaux de bord
+  #    Grafana persistants, en plus de l'UI BetterDB déjà incluse ci-dessus.
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: smartstudy-prometheus
+    profiles: ["monitoring"]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - betterdb-monitor
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: smartstudy-grafana
+    profiles: ["monitoring"]
+    ports:
+      - "3002:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
 volumes:
   chroma_data:
   documents_data:
+  valkey_data:
+  betterdb_data:
+  prometheus_data:
+  grafana_data:

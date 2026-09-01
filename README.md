@@ -15,6 +15,8 @@
   <img src="https://img.shields.io/badge/FastAPI-0.100+-green" />
   <img src="https://img.shields.io/badge/React-18+-blue" />
   <img src="https://img.shields.io/badge/n8n-local%20agent-purple" />
+  <img src="https://img.shields.io/badge/Valkey-cache-dc2626" />
+  <img src="https://img.shields.io/badge/BetterDB-observability-059669" />
 </p>
 
 <p align="center">
@@ -27,7 +29,7 @@
 
 PaperBrain turns your documents into an interactive study session. Upload a PDF, ask questions about it, generate a quiz, get flashcards, or request a plain-English explanation — all in one place.
 
-It runs on a **FastAPI + React** stack with **Qwen 2.5-72B** via HuggingFace for cloud inference, **ChromaDB** for document retrieval (RAG), and an optional **local n8n AI Agent** powered by Ollama for fully offline automation.
+It runs on a **FastAPI + React** stack with **Qwen 2.5-72B** via HuggingFace for cloud inference, **ChromaDB** for document retrieval (RAG), **Valkey + BetterDB** for semantic caching and observability, and an optional **local n8n AI Agent** powered by Ollama for fully offline automation.
 
 ---
 
@@ -45,6 +47,8 @@ It runs on a **FastAPI + React** stack with **Qwen 2.5-72B** via HuggingFace for
 | 👤 | **Auth** | JWT-based register/login with per-user data separation |
 | 📊 | **Profile & Stats** | Quiz history, streaks, and progression tracking |
 | 🔄 | **n8n AI Agent** | Local agent with Ollama (llama3.1 / Qwen 2.5) + 5 tools |
+| ⚡ | **Semantic Cache** | Valkey-backed cache that hits on *meaning*, not exact text — paraphrased questions skip the LLM entirely |
+| 🔭 | **Observability** | BetterDB watches Valkey + the cache live; optional Prometheus/Grafana dashboards |
 
 ---
 
@@ -62,7 +66,8 @@ PaperBrain/
 │   │   │   ├── models.py           # User, QuizResult, StudySession
 │   │   │   └── crud.py             # DB operations
 │   │   ├── tools/                  # AI tool modules
-│   │   ├── agent.py                # Main AI dispatcher
+│   │   ├── agent.py                # Main AI dispatcher — checks/fills the cache
+│   │   ├── cache.py                # Valkey + BetterDB semantic cache (app/cache.py)
 │   │   ├── ingest.py               # Document ingestion + chunking
 │   │   ├── rag.py                  # ChromaDB vector store
 │   │   ├── router_service.py       # API routes
@@ -81,6 +86,9 @@ PaperBrain/
 ├── n8n/                            # Local n8n AI Agent
 │   └── workflows/
 │       └── PaperBrain.json
+├── monitoring/                     # Optional Prometheus + Grafana stack
+│   ├── prometheus.yml              # Scrapes BetterDB's /api/prometheus/metrics
+│   └── grafana-datasources.yml     # Pre-wires the Prometheus datasource
 └── docs/
     ├── logo.png
     └── n8n-workflow.png
@@ -126,6 +134,21 @@ GROQ_MODEL=groq/llama-3.3-70b-versatile
 HF_MODEL=Qwen/Qwen2.5-72B-Instruct
 OPENAI_MODEL=gpt-4o-mini
 LLM_FALLBACK_ORDER=groq,huggingface,openai
+
+# Cache (app/cache.py) — needs a running Valkey, see step 4 below.
+# Safe to leave everything at its default: a Valkey outage just disables the
+# cache and falls back to normal (uncached) LLM calls.
+VALKEY_HOST=localhost
+VALKEY_PORT=6379
+SEMANTIC_CACHE_ENABLED=true
+SEMANTIC_CACHE_THRESHOLD=0.12
+SEMANTIC_CACHE_TTL=86400
+```
+
+Start Valkey (needed even outside Docker Compose — see step 4):
+
+```bash
+docker run -d -p 6379:6379 valkey/valkey:8-alpine
 ```
 
 Start the server:
@@ -160,6 +183,33 @@ Then in n8n:
 3. Set the Ollama node URL to `http://localhost:11434`
 4. Click **Publish**
 
+### 5 — Cache + Observability (recommended)
+
+The whole stack — backend, frontend, Valkey, and BetterDB Monitor — runs with one command:
+
+```bash
+docker compose up -d
+```
+
+| Service | URL | What it's for |
+|---|---|---|
+| BetterDB Monitor | http://localhost:3001 | Live Valkey health (memory, slowlog, hot keys) + semantic-cache hit-rate, cost saved, and threshold recommendations |
+| Backend API | http://localhost:8000 | FastAPI |
+| Frontend | http://localhost:5173 | React app |
+
+Add `--profile monitoring` to also stand up Prometheus + Grafana, scraping BetterDB's `betterdb_*` and `semantic_cache_*` metrics into persistent dashboards:
+
+```bash
+docker compose --profile monitoring up -d
+```
+
+| Service | URL | Default login |
+|---|---|---|
+| Grafana | http://localhost:3002 | `admin` / `admin` (override with `GRAFANA_PASSWORD`) |
+| Prometheus | http://localhost:9090 | — |
+
+Running the backend outside Docker (step 2 above)? Point it at any Valkey instance with `VALKEY_HOST` / `VALKEY_PORT` — see the `.env` block in step 2.
+
 ---
 
 ## n8n AI Agent
@@ -189,6 +239,85 @@ The local n8n agent orchestrates all learning tools automatically using **Ollama
 | 📄 RAG | Search your uploaded documents |
 | 📝 Summarize | Summarize topics automatically |
 | 🧪 Quiz | Generate multiple-choice questions |
+
+---
+
+## Cache & Observability
+
+Five of the six AI actions (`rag-qa`, `quiz`, `flashcards`, `explain`, `resume`) go through a **semantic cache** before they go anywhere near an LLM. Unlike a plain key-value cache, it hits on *meaning*: "C'est quoi la mitose ?" and "Peux-tu m'expliquer la mitose ?" embed to nearly the same vector, so the second question is served from Valkey in milliseconds instead of triggering another Groq/HuggingFace/OpenAI call. `chat` is deliberately excluded — its answer depends on recent conversation history that a single cached query can't represent, so caching it could replay a reply from an unrelated conversation.
+
+```mermaid
+flowchart LR
+    U([User]) --> FE[React frontend]
+    FE --> API["FastAPI /api/*"]
+    API --> AG["agent.py — run_agent()"]
+
+    AG -->|1 - embed + check| SC["app/cache.py\nSemanticCache"]
+    SC -->|hit| AG
+    AG -.->|cache hit: skip LLM| RESP1([Response])
+
+    AG -->|2 - miss| RAG["rag.py — hybrid BM25\n+ embeddings retrieval"]
+    RAG --> LLM["llm/router.py\nLiteLLM: Groq → HF → OpenAI"]
+    LLM --> AG
+    AG -->|3 - store result| SC
+    AG --> RESP2([Response])
+
+    SC <==> VK[(Valkey)]
+    RAG -.-> CHROMA[(ChromaDB)]
+
+    BDB["BetterDB Monitor\n:3001"] -->|watches| VK
+    BDB -->|/api/prometheus/metrics| PROM["Prometheus\n:9090 (optional)"]
+    PROM --> GRAF["Grafana\n:3002 (optional)"]
+
+    style SC fill:#4f46e5,color:#fff
+    style VK fill:#dc2626,color:#fff
+    style BDB fill:#059669,color:#fff
+```
+
+**Cache hit vs. cache miss:**
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant A as agent.py
+    participant C as Valkey / SemanticCache
+    participant L as LLM router
+
+    U->>A: "Explique la mitose"
+    A->>C: embed + check(prompt)
+    alt cache hit (similar question seen before)
+        C-->>A: cached result (cosine distance < threshold)
+        A-->>U: instant response, cached: true
+    else cache miss
+        C-->>A: no match
+        A->>L: complete(system, prompt)
+        L-->>A: LLM answer
+        A->>C: store(prompt, result)
+        A-->>U: response, cached: false
+    end
+```
+
+### Why Valkey + BetterDB
+
+- **[Valkey](https://valkey.io)** — Linux Foundation fork of Redis, protocol-compatible, open-source license. Drop-in cache backend, nothing app-specific about it.
+- **[BetterDB](https://www.betterdb.com)** — purpose-built to observe *exactly* this pairing: it watches Valkey directly (slowlog, hot keys, memory, ops/sec) and auto-discovers every `SemanticCache` instance registered in Valkey's `__betterdb:caches` hash, so hit-rate, cost saved, and similarity-threshold recommendations show up in its dashboard with zero extra wiring.
+
+### Cache isolation
+
+`rag-qa` can echo a user's own uploaded documents back in the answer, so each user gets their **own cache namespace** — same isolation model as the per-user ChromaDB collections. `quiz`, `flashcards`, `explain`, and `resume` only ever depend on a topic string, nothing user-specific, so those are cached **globally**: the first person who asks for a "quiz on photosynthesis" pays the LLM cost, everyone after gets it free. See `SHARED_CACHE_ACTIONS` in `backend/app/cache.py`.
+
+### Configuration
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `VALKEY_HOST` / `VALKEY_PORT` | `valkey` / `6379` (Docker) — `localhost` / `6379` (local) | Where the backend finds Valkey |
+| `SEMANTIC_CACHE_ENABLED` | `true` | Kill switch — `false` bypasses the cache entirely |
+| `SEMANTIC_CACHE_THRESHOLD` | `0.12` | Max cosine distance for a hit; lower = stricter matching |
+| `SEMANTIC_CACHE_TTL` | `86400` (24h) | How long a cached answer stays valid |
+| `BETTERDB_ENCRYPTION_KEY` | dev placeholder | At-rest encryption key for BetterDB's stored credentials — **set a real one in production** |
+| `GRAFANA_PASSWORD` | `admin` | Grafana admin password (`monitoring` profile only) |
+
+A Valkey outage never breaks the app — `app/cache.py` swallows connection errors and falls back to an uncached LLM call, so caching is strictly an optimization, never a hard dependency.
 
 ---
 
@@ -245,7 +374,9 @@ SECRET_KEY=...
 
 ## Tech Stack
 
-**Backend** — FastAPI · SQLite + SQLAlchemy · ChromaDB (hybrid BM25 + multilingual embeddings, per-user collections) · LiteLLM (Groq / HuggingFace / OpenAI cascade) · python-jose · pdfplumber · python-docx
+**Backend** — FastAPI · SQLite + SQLAlchemy · ChromaDB (hybrid BM25 + multilingual embeddings, per-user collections) · LiteLLM (Groq / HuggingFace / OpenAI cascade) · Valkey + BetterDB semantic cache · python-jose · pdfplumber · python-docx
+
+**Observability** — BetterDB Monitor (Valkey health + cache analytics) · Prometheus · Grafana *(optional, `monitoring` profile)*
 
 **Frontend** — React 18 · Vite
 
