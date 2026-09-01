@@ -70,7 +70,7 @@ PaperBrain/
 │   │   └── main.py                 # FastAPI app entry point
 │   ├── Dockerfile
 │   └── requirements.txt
-├── frontend/                       # React frontend
+├── frontend/                 
 │   └── src/
 │       └── pages/
 │           ├── Chat.jsx
