@@ -78,43 +78,8 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Dashboards optionnels — `docker compose --profile monitoring up` ─────
-  #    Scrape le endpoint Prometheus de BetterDB pour des tableaux de bord
-  #    Grafana persistants, en plus de l'UI BetterDB déjà incluse ci-dessus.
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: smartstudy-prometheus
-    profiles: ["monitoring"]
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    depends_on:
-      - betterdb-monitor
-    restart: unless-stopped
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: smartstudy-grafana
-    profiles: ["monitoring"]
-    ports:
-      - "3002:3000"
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
-    depends_on:
-      - prometheus
-    restart: unless-stopped
-
 volumes:
   chroma_data:
   documents_data:
   valkey_data:
   betterdb_data:
-  prometheus_data:
-  grafana_data:

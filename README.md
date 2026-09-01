@@ -48,11 +48,59 @@ It runs on a **FastAPI + React** stack with **Qwen 2.5-72B** via HuggingFace for
 | 📊 | **Profile & Stats** | Quiz history, streaks, and progression tracking |
 | 🔄 | **n8n AI Agent** | Local agent with Ollama (llama3.1 / Qwen 2.5) + 5 tools |
 | ⚡ | **Semantic Cache** | Valkey-backed cache that hits on *meaning*, not exact text — paraphrased questions skip the LLM entirely |
-| 🔭 | **Observability** | BetterDB watches Valkey + the cache live; optional Prometheus/Grafana dashboards |
+| 🔭 | **Observability** | BetterDB watches Valkey + the semantic cache live — hit-rate, cost saved, slowlog, hot keys |
 
 ---
 
 ## Architecture
+
+### Pipeline
+
+Two pipelines share the same backend: **ingestion** (turning an uploaded file into searchable vectors) and **query** (turning a question into a cached-or-generated answer). Both are backed by per-user isolation end to end.
+
+```mermaid
+flowchart TD
+    FE["React frontend"]
+    AUTH["auth/jwt_handler.py + middleware.py\nJWT issued on /api/auth/login"]
+    FE -->|Bearer token| AUTH
+
+    subgraph ING["Ingestion — /api/upload"]
+        direction TB
+        UP["Upload\nPDF · TXT · DOCX"] --> PARSE["ingest.py\npdfplumber / python-docx"]
+        PARSE --> CHUNK["Chunking"]
+        CHUNK --> EMB["Multilingual embeddings\nparaphrase-multilingual-MiniLM-L12-v2"]
+        EMB --> CHROMA[("ChromaDB\ncollection per user_id")]
+    end
+
+    subgraph QRY["Query — /api/chat · rag-qa · quiz · flashcards · explain · resume"]
+        direction TB
+        ASK["Question / topic"] --> AGENT["agent.py\nrun_agent()"]
+        AGENT --> CHECK{"cache.py\ncheck() — cache sémantique"}
+        CHECK -->|hit| ANSWER(["Answer"])
+        CHECK -->|miss - rag-qa| HYBRID["rag.py\nBM25 + vector, fused by RRF"]
+        HYBRID --> CTX["Build context\nfrom top chunks"]
+        CTX --> LLM
+        CHECK -->|miss - other actions| LLM["llm/router.py\nLiteLLM: Groq → HuggingFace → OpenAI"]
+        LLM --> STORE["cache.py\nstore()"]
+        STORE --> ANSWER
+    end
+
+    AUTH --> ING
+    AUTH --> QRY
+    HYBRID -.->|reads| CHROMA
+    CHECK <-.->|embed + lookup| VK[("Valkey")]
+    STORE -.->|write| VK
+
+    BDB["BetterDB Monitor :3001\nslowlog · hot keys · memory\ncache hit-rate · cost saved"]
+    VK -.->|observed by| BDB
+
+    style CHECK fill:#4f46e5,color:#fff
+    style VK fill:#dc2626,color:#fff
+    style BDB fill:#059669,color:#fff
+    style CHROMA fill:#f59e0b,color:#111
+```
+
+### Folder structure
 
 ```
 PaperBrain/
@@ -86,9 +134,6 @@ PaperBrain/
 ├── n8n/                            # Local n8n AI Agent
 │   └── workflows/
 │       └── PaperBrain.json
-├── monitoring/                     # Optional Prometheus + Grafana stack
-│   ├── prometheus.yml              # Scrapes BetterDB's /api/prometheus/metrics
-│   └── grafana-datasources.yml     # Pre-wires the Prometheus datasource
 └── docs/
     ├── logo.png
     └── n8n-workflow.png
@@ -197,17 +242,6 @@ docker compose up -d
 | Backend API | http://localhost:8000 | FastAPI |
 | Frontend | http://localhost:5173 | React app |
 
-Add `--profile monitoring` to also stand up Prometheus + Grafana, scraping BetterDB's `betterdb_*` and `semantic_cache_*` metrics into persistent dashboards:
-
-```bash
-docker compose --profile monitoring up -d
-```
-
-| Service | URL | Default login |
-|---|---|---|
-| Grafana | http://localhost:3002 | `admin` / `admin` (override with `GRAFANA_PASSWORD`) |
-| Prometheus | http://localhost:9090 | — |
-
 Running the backend outside Docker (step 2 above)? Point it at any Valkey instance with `VALKEY_HOST` / `VALKEY_PORT` — see the `.env` block in step 2.
 
 ---
@@ -266,8 +300,6 @@ flowchart LR
     RAG -.-> CHROMA[(ChromaDB)]
 
     BDB["BetterDB Monitor\n:3001"] -->|watches| VK
-    BDB -->|/api/prometheus/metrics| PROM["Prometheus\n:9090 (optional)"]
-    PROM --> GRAF["Grafana\n:3002 (optional)"]
 
     style SC fill:#4f46e5,color:#fff
     style VK fill:#dc2626,color:#fff
@@ -315,7 +347,6 @@ sequenceDiagram
 | `SEMANTIC_CACHE_THRESHOLD` | `0.12` | Max cosine distance for a hit; lower = stricter matching |
 | `SEMANTIC_CACHE_TTL` | `86400` (24h) | How long a cached answer stays valid |
 | `BETTERDB_ENCRYPTION_KEY` | dev placeholder | At-rest encryption key for BetterDB's stored credentials — **set a real one in production** |
-| `GRAFANA_PASSWORD` | `admin` | Grafana admin password (`monitoring` profile only) |
 
 A Valkey outage never breaks the app — `app/cache.py` swallows connection errors and falls back to an uncached LLM call, so caching is strictly an optimization, never a hard dependency.
 
@@ -376,7 +407,7 @@ SECRET_KEY=...
 
 **Backend** — FastAPI · SQLite + SQLAlchemy · ChromaDB (hybrid BM25 + multilingual embeddings, per-user collections) · LiteLLM (Groq / HuggingFace / OpenAI cascade) · Valkey + BetterDB semantic cache · python-jose · pdfplumber · python-docx
 
-**Observability** — BetterDB Monitor (Valkey health + cache analytics) · Prometheus · Grafana *(optional, `monitoring` profile)*
+**Observability** — BetterDB Monitor (Valkey health + semantic-cache analytics)
 
 **Frontend** — React 18 · Vite
 
