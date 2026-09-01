@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  # 100+ métriques betterdb_* : Valkey (mémoire, ops/sec, slowlog, hot keys)
+  # + le cache sémantique (hit-rate, coût économisé, seuils recommandés).
+  - job_name: betterdb
+    metrics_path: /api/prometheus/metrics
+    static_configs:
+      - targets: ["betterdb-monitor:3001"]

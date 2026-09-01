@@ -9,7 +9,7 @@ ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # ── Backend + Frontend servi par FastAPI ──────────────────────────────────────
-FROM python:3.10-slim
+FROM python:3.11-slim
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends curl \

@@ -26,7 +26,9 @@ def _tokenize(text: str) -> list:
     return _TOKEN_RE.findall(text.lower())
 
 
-def _get_embedding_fn():
+def get_embedding_fn():
+    """Modèle multilingue partagé — aussi réutilisé par app.cache pour le
+    cache sémantique, afin de ne charger le modèle qu'une seule fois."""
     global _embedding_fn
     if _embedding_fn is None:
         _embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
@@ -49,7 +51,7 @@ def get_collection(user_id: str = "anonymous"):
     client = get_chroma_client()
     return client.get_or_create_collection(
         name=_safe_collection_name(user_id),
-        embedding_function=_get_embedding_fn(),
+        embedding_function=get_embedding_fn(),
         metadata={"hnsw:space": "cosine"},
     )
 
