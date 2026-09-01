@@ -247,7 +247,7 @@ SECRET_KEY=...
 
 **Backend** — FastAPI · SQLite + SQLAlchemy · ChromaDB (hybrid BM25 + multilingual embeddings, per-user collections) · LiteLLM (Groq / HuggingFace / OpenAI cascade) · python-jose · pdfplumber · python-docx
 
-**Frontend** — React 18 · Vite
+**Frontend** Gradio
 
 **Local AI** — n8n · Ollama · llama3.1
 
